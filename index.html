@@ -19,6 +19,10 @@
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin: 20px 0;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
         }
         .idiom {
             font-size: 24px;
@@ -33,6 +37,7 @@
         .example {
             color: #7f8c8d;
             font-style: italic;
+            margin-bottom: 15px;
         }
         h1 {
             color: #2c3e50;
@@ -43,19 +48,99 @@
             text-align: center;
             margin-bottom: 20px;
         }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .favorites {
+            margin-top: 30px;
+        }
+        .favorite-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .search-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .search-input {
+            padding: 10px;
+            width: 80%;
+            max-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+        }
+        /* Dark theme styles */
+        body.dark-theme {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+        }
+        body.dark-theme .card {
+            background-color: #34495e;
+            color: #ecf0f1;
+        }
+        body.dark-theme .idiom {
+            color: #3498db;
+        }
+        body.dark-theme .meaning {
+            color: #ecf0f1;
+        }
+        body.dark-theme .example {
+            color: #bdc3c7;
+        }
     </style>
 </head>
 <body>
+    <button class="button theme-switch" onclick="toggleTheme()">Toggle Theme</button>
     <h1>Idiom of the Day</h1>
     <div class="date" id="current-date"></div>
+    
+    <div class="search-container">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search idioms...">
+        <button class="button" onclick="searchIdioms()">Search</button>
+    </div>
+
     <div class="card">
         <div class="idiom" id="idiom"></div>
         <div class="meaning" id="meaning"></div>
         <div class="example" id="example"></div>
     </div>
 
+    <div class="button-container">
+        <button class="button" onclick="showRandomIdiom()">Show Random Idiom</button>
+        <button class="button" onclick="addToFavorites()">Add to Favorites</button>
+        <button class="button" onclick="shareIdiom()">Share Idiom</button>
+    </div>
+
+    <div class="favorites">
+        <h2>My Favorite Idioms</h2>
+        <div id="favoritesList"></div>
+    </div>
+
     <script>
-        // Array of idioms with their meanings and examples
+        // Expanded array of idioms
         const idioms = [
             {
                 idiom: "Bite off more than you can chew",
@@ -84,11 +169,84 @@
             }
         ];
 
+        // Get favorites from localStorage
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+
+        // Function to toggle dark/light theme
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+        }
+
         // Function to get a deterministic index based on the date
         function getIdiomIndexForToday() {
             const today = new Date();
             const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
             return dayOfYear % idioms.length;
+        }
+
+        // Function to show a random idiom
+        function showRandomIdiom() {
+            const randomIndex = Math.floor(Math.random() * idioms.length);
+            displayIdiom(randomIndex);
+        }
+
+        // Function to display an idiom by index
+        function displayIdiom(index) {
+            document.getElementById('idiom').textContent = idioms[index].idiom;
+            document.getElementById('meaning').textContent = idioms[index].meaning;
+            document.getElementById('example').textContent = `Example: ${idioms[index].example}`;
+        }
+
+        // Function to add current idiom to favorites
+        function addToFavorites() {
+            const currentIdiom = document.getElementById('idiom').textContent;
+            if (!favorites.includes(currentIdiom)) {
+                favorites.push(currentIdiom);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                updateFavoritesList();
+            }
+        }
+
+        // Function to update favorites list display
+        function updateFavoritesList() {
+            const favoritesList = document.getElementById('favoritesList');
+            favoritesList.innerHTML = '';
+            favorites.forEach(favorite => {
+                const div = document.createElement('div');
+                div.className = 'favorite-item';
+                div.textContent = favorite;
+                favoritesList.appendChild(div);
+            });
+        }
+
+        // Function to share the current idiom
+        function shareIdiom() {
+            const idiom = document.getElementById('idiom').textContent;
+            const meaning = document.getElementById('meaning').textContent;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Idiom of the Day',
+                    text: `${idiom}: ${meaning}`
+                });
+            } else {
+                alert('Share feature not supported on this browser');
+            }
+        }
+
+        // Function to search idioms
+        function searchIdioms() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const found = idioms.findIndex(item => 
+                item.idiom.toLowerCase().includes(searchTerm) || 
+                item.meaning.toLowerCase().includes(searchTerm)
+            );
+            
+            if (found !== -1) {
+                displayIdiom(found);
+            } else {
+                alert('No matching idioms found');
+            }
         }
 
         // Function to update the display
@@ -102,9 +260,8 @@
             });
             
             document.getElementById('current-date').textContent = today;
-            document.getElementById('idiom').textContent = idioms[index].idiom;
-            document.getElementById('meaning').textContent = idioms[index].meaning;
-            document.getElementById('example').textContent = `Example: ${idioms[index].example}`;
+            displayIdiom(index);
+            updateFavoritesList();
         }
 
         // Update display when page loads
